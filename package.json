@@ -95,9 +95,12 @@
     "bridge/pwndbg/core_context.py",
     "third_party/pwndbg/README.md",
     "third_party/pwndbg/LICENSE.md",
-    "licenses"
+    "licenses",
+    "tools"
   ],
   "scripts": {
+    "tool:pe-slice": "node tools/pe-slice.mjs",
+    "tool:il2cpp-asm": "node tools/il2cpp-asm.mjs",
     "release:notes": "node scripts/release-notes.mjs",
     "deps:check": "node scripts/check-dependency-install.mjs",
     "metadata:generate": "node scripts/run-exclusive.mjs artifacts node scripts/generate-package-metadata.mjs",

@@ -199,6 +199,14 @@ explicit path or endpoint and do not need it.
 - PE resource type/name/language trees and static icon group references:
   `inspect_pe_resources` with an explicit path. This portable operation requires
   no active target or engine; opaque payloads retain file ranges and SHA-256.
+- Large PE (>10MB) or Unity GameAssembly.dll: Do NOT call `open_binary` directly
+  on the whole binary (analysis will exceed MCP timeout and exhaust memory).
+  First slice the target function or class using `tools/pe_slice.py` (or `node tools/pe-slice.mjs`)
+  with `--class`, `--method`, or `--rva` (and `--script-json` from Il2CppDumper if available)
+  to generate a lightweight slice DLL (<1MB). For non-PE IL2CPP binaries (Android `libil2cpp.so`
+  or iOS/macOS `UnityFramework`), inspect annotated disassembly directly using `tools/il2cpp_asm.py`
+  (or `node tools/il2cpp-asm.mjs`). Then call `open_binary` on the generated slice PE (`<target>_slice.dll`)
+  and proceed with `procedure_pseudo_code` or `procedure_assembly` at the printed VA.
 - Native executable, library, or analysis database: `open_binary`, then
   use focused analysis tools directly; call `binary_overview` when metadata or
   inventory context is useful and available from the selected provider.

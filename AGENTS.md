@@ -57,6 +57,15 @@ usage, elapsed time, CPU time and peak process-family memory. Separate cold
 and warm runs, label estimates, and state unmeasured costs. Fewer bytes alone
 do not establish fewer tokens or faster analysis.
 
+## Large Target Routing and Slicing Guidelines
+
+Agents encountering large Windows PE binaries (>10MB) or Unity IL2CPP `GameAssembly.dll` MUST NOT blindly call `open_binary` on the entire binary. Deep disassembler analysis (such as Windows Ghidra / REA) parses and disassembles the entire binary, leading to MCP request timeouts and memory exhaustion.
+
+Required agent routing workflow:
+1. **Pre-check Size and Engine**: Check if the target is a PE > 10MB or a Unity IL2CPP module (`GameAssembly.dll`, `libil2cpp.so`, `UnityFramework`).
+2. **Prioritize Slicing**: Call `tools/pe_slice.py` (or `node tools/pe-slice.mjs`) with the desired `--class`, `--method`, or `--rva` (and `--script-json` from Il2CppDumper if available) to produce a lightweight slice DLL (<1MB). For Android/iOS/Mach-O IL2CPP binaries, use `tools/il2cpp_asm.py` (or `node tools/il2cpp-asm.mjs`) to generate annotated assembly directly.
+3. **Open the Slice**: Call `open_binary` targeting the generated slice PE (`<name>.dll`), then inspect the target function with `procedure_pseudo_code` or `procedure_assembly` using the printed VA.
+
 ## Development
 
 Use [.nvmrc](.nvmrc) and `package.json#packageManager` for the pinned toolchain. Cursor Cloud may place older Node.js first on `PATH`; environment setup installs the pinned toolchain under `/usr/local/bin`.

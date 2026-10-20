@@ -3,9 +3,11 @@
 [English](../../README.md) · [简体中文](README_zh.md) · [繁體中文](README_zh-TW.md) · [日本語](README_ja.md) · **한국어** · [Türkçe](README_tr.md) · [Русский](README_ru.md) · [Tiếng Việt](README_vi.md) · [ไทย](README_th.md) · [Deutsch](README_de.md) · [Español](README_es.md) · [Français](README_fr.md) · [Українська](README_uk.md) · [Polski](README_pl.md) · [Português (Brasil)](README_pt-BR.md) · [العربية](README_ar.md) · [فارسی](README_fa.md) · [Bahasa Indonesia](README_id.md) · [Italiano](README_it.md)
 · [Ελληνικά](README_el.md) · [മലയാളം](README_ml.md)
 
-# REA: 무엇이든 리버스 엔지니어링
+# REA: 무엇이든 리버스 엔지니어링 (포크: rea-hwa)
 
 ### 하나의 MCP로 바이너리, 애플리케이션, 런타임 동작을 리버스 엔지니어링합니다.
+
+### Unity IL2CPP 및 대용량 타겟 PE 슬라이싱 도구 확장.
 
 **마음에 드는 기능을 발견했다면, 바이너리 수준까지 작동 원리를 이해하세요.**
 
@@ -20,15 +22,28 @@
 
 **[웹사이트](https://rea.tools/ko/) · [가이드](https://rea.tools/ko/guides/) · [사례](https://rea.tools/ko/showcase/)**
 
-[빠른 시작](#빠른-시작) · [REA의 작동 방식](#rea의-작동-방식) · [분석할 수 있는 대상](#분석할-수-있는-대상) · [사례](#사례) · [자주 묻는 질문](#자주-묻는-질문) · [문서](#문서)
+[빠른 시작](#빠른-시작) · [⚡ rea-hwa 특화 확장 기능](#-rea-hwa-특화-확장-기능) · [REA의 작동 방식](#rea의-작동-방식) · [분석할 수 있는 대상](#분석할-수-있는-대상) · [사례](#사례) · [자주 묻는 질문](#자주-묻는-질문) · [문서](#문서)
 
 <code>npx rea-agents setup</code>
 
 </div>
 
+> [!NOTE]
+> **포크 안내 (`magjangin/rea-hwa`)**:
+> 본 저장소는 공식 업스트림 프로젝트인 [morluto/rea](https://github.com/morluto/rea)의 기능 특화 포크(Fork)이며, [@magjangin](https://github.com/magjangin)이 관리합니다.
+> 오리지널 REA의 모든 핵심 저작권 및 라이선스는 MIT 라이선스에 따라 업스트림 [morluto/rea](https://github.com/morluto/rea) 저작자 및 기여자들에게 있습니다.
+>
+> **`rea-hwa`에서 추가/개선된 핵심 기능:**
+>
+> 1. **대용량 PE 및 Unity IL2CPP 슬라이싱 도구 (`tools/pe_slice.py`, `tools/il2cpp_asm.py`)**: Unity 게임의 `GameAssembly.dll`(50MB~100MB+ 이상) 또는 모바일 모듈(`libil2cpp.so`, `UnityFramework`) 분석 시 발생하는 Ghidra 메모리 고갈 및 MCP 요청 타임아웃 문제를 해결하기 위해, 필요한 함수와 심볼만 초경량 슬라이스 DLL(<1MB)로 추출하여 1분 이내에 정밀 디컴파일/역어셈블을 수행합니다.
+> 2. **AI 에이전트 라우팅 가이드 내장**: Antigravity, Claude Code 등 AI 코딩 에이전트가 대용량 바이너리를 만났을 때 멈추지 않고 슬라이싱 도구를 우선 활용하도록 하는 전용 라우팅 지침이 포함되어 있습니다.
+>
+> _공식 메인라인 REA 릴리스를 찾으신다면 공식 저장소 [morluto/rea](https://github.com/morluto/rea) 또는 [rea.tools](https://rea.tools/)를 방문해 주세요._
+
 > [!IMPORTANT]
-> REA 공식 배포처: [morluto/rea](https://github.com/morluto/rea), [rea.tools](https://rea.tools/), [rea-agents](https://www.npmjs.com/package/rea-agents) (npm).
-> 이 공식 배포처에서 제공하는 설치 및 릴리스 링크를 이용하세요. 비슷한 저장소 이름이나 복사된 README만으로는 공식 배포 파일인지 확인할 수 없습니다.
+> **공식 배포처 안내:**
+> 업스트림 공식 REA 배포처는 [morluto/rea](https://github.com/morluto/rea), [rea.tools](https://rea.tools/), 그리고 [rea-agents](https://www.npmjs.com/package/rea-agents) npm 패키지입니다.
+> 공식 메인라인 릴리스는 공식 배포처를 참고하시기 바랍니다. 본 저장소(`magjangin/rea-hwa`)는 게임 리버스 엔지니어링 및 대용량 바이너리 슬라이싱을 위해 최적화된 독립 오픈소스 포크입니다.
 
 <div align="center">
 
@@ -63,6 +78,40 @@ REA는 에이전트를 분석 도구에 연결해 네이티브 바이너리, Jav
 설정 과정은 에이전트에 REA를 등록하고 해당 버전에 맞는 워크플로 지침을 설치합니다. 네이티브 분석에는 기존 Hopper, Ghidra 또는 IDA 설치를 사용할 수 있습니다. 승인하면 설정 과정에서 Hopper를 설치할 수도 있습니다. 정적 JavaScript 분석에는 네이티브 분석 엔진이 필요하지 않습니다.
 
 > <strong>[REA 웹사이트](https://rea.tools/ko/)</strong>에서 설정 방법, 그림으로 설명한 가이드, 실제 사례를 확인하세요.
+
+## ⚡ rea-hwa 특화 확장 기능
+
+`rea-hwa`는 대용량 Windows PE 타겟 및 Unity IL2CPP 게임을 리버스 엔지니어링할 때 발생하는 디컴파일러 병목 현상을 해결하기 위해 특화 도구 및 AI 에이전트 라우팅 지침을 제공합니다:
+
+### 1. 초고속 PE 슬라이싱 (`tools/pe_slice.py` / `tools/pe-slice.mjs`)
+
+Unity 게임의 `GameAssembly.dll`(통상 50MB~100MB+)과 같은 초대형 Windows PE 바이너리를 REA의 Ghidra 프로바이더로 분석하면 MCP 요청 타임아웃(1~2분) 및 메모리 고갈이 발생하기 쉽습니다.
+
+- **최소 슬라이스 PE 생성**: 분석 대상 함수, 언와인드 `.pdata` 체인, 호출 스텁(callee stubs), RIP 상대 참조 데이터 페이지만 포함된 초경량 슬라이스 DLL(<1MB)을 추출합니다.
+- **Il2CppDumper 연동**: Il2CppDumper의 `script.json` 메서드 및 문자열 이름을 슬라이스 PE의 Export 테이블에 자동 주입하여 Ghidra 디컴파일 시 원본 심볼 이름이 그대로 노출됩니다.
+- **분석 시간 단축**: 10분 이상 걸리거나 타임아웃되던 분석을 **1분 이내**에 완료합니다.
+- **사용법**:
+  ```bash
+  node tools/pe-slice.mjs --dll GameAssembly.dll --script-json script.json --class TargetClass --out slices/TargetClass.dll
+  node tools/pe-slice.mjs --dll GameAssembly.dll --script-json script.json --method "TargetClass::TargetMethod" --out slices/TargetMethod.dll
+  ```
+
+### 2. 크로스 플랫폼 IL2CPP 역어셈블 (`tools/il2cpp_asm.py` / `tools/il2cpp-asm.mjs`)
+
+- **실시간 명령어 심볼 주석**: 무거운 디컴파일러 세션을 띄우지 않고도 ARM64 / x64 IL2CPP 바이너리(ELF, Mach-O, PE)를 직접 디스어셈블합니다.
+- **Windows에서 모바일 타겟 분석**: Windows 환경에서도 Android `libil2cpp.so`나 iOS `UnityFramework`를 `dump.cs` 및 `script.json`과 매핑하여 함수 호출 및 문자열 주석과 함께 즉시 분석할 수 있습니다.
+- **FairPlay 암호화 검사**: iOS Mach-O의 `cryptid` 암호화 여부를 확인하는 `--check-encryption` 플래그를 지원합니다.
+- **사용법**:
+  ```bash
+  node tools/il2cpp-asm.mjs --binary libil2cpp.so --dump dump.cs --script-json script.json --class PlayerController --out logs/PlayerController.asm
+  node tools/il2cpp-asm.mjs --check-encryption Payload/Game.app/Frameworks/UnityFramework.framework/UnityFramework
+  ```
+
+### 3. AI 에이전트 라우팅 가이드 내장
+
+`AGENTS.md` 및 `SKILL.md`에 지침이 사전 구성되어 있어, AI 코딩 어시스턴트가 10MB 이상의 PE 바이너리나 `GameAssembly.dll`을 감지하면 자동으로 슬라이싱 도구를 먼저 호출하여 컨텍스트 멈춤 없이 효율적으로 분석합니다. 자세한 내용은 [tools/README.md](../../tools/README.md)를 참고하세요.
+
+---
 
 ## 빠른 시작
 

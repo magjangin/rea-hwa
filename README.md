@@ -3,9 +3,11 @@
 **English** · [简体中文](docs/readme/README_zh.md) · [繁體中文](docs/readme/README_zh-TW.md) · [日本語](docs/readme/README_ja.md) · [한국어](docs/readme/README_ko.md) · [Türkçe](docs/readme/README_tr.md) · [Русский](docs/readme/README_ru.md) · [Tiếng Việt](docs/readme/README_vi.md) · [ไทย](docs/readme/README_th.md) · [Deutsch](docs/readme/README_de.md) · [Español](docs/readme/README_es.md) · [Français](docs/readme/README_fr.md) · [Українська](docs/readme/README_uk.md) · [Polski](docs/readme/README_pl.md) · [Português (Brasil)](docs/readme/README_pt-BR.md) · [العربية](docs/readme/README_ar.md) · [فارسی](docs/readme/README_fa.md) · [Bahasa Indonesia](docs/readme/README_id.md) · [Italiano](docs/readme/README_it.md)
 · [Ελληνικά](docs/readme/README_el.md) · [മലയാളം](docs/readme/README_ml.md)
 
-# REA: Reverse Engineer Anything
+# REA: Reverse Engineer Anything (Fork: rea-hwa)
 
 ### One MCP for reverse engineering across binaries, applications, and runtime behavior.
+
+### Enhanced with Unity IL2CPP & Large Target PE Slicing Tools.
 
 **See a feature you like. Understand how it works, down to the binary level.**
 
@@ -20,17 +22,29 @@
 
 **[Website](https://rea.tools/) · [Guides](https://rea.tools/guides/) · [Showcases](https://rea.tools/showcase/)**
 
-[Quick start](#quick-start) · [How REA works](#how-rea-works) · [What you can analyze](#what-you-can-analyze) · [Showcases](#showcases) · [FAQ](#faq) · [Documentation](#documentation)
+[Quick start](#quick-start) · [⚡ rea-hwa Enhancements](#-specialized-enhancements-in-rea-hwa) · [How REA works](#how-rea-works) · [What you can analyze](#what-you-can-analyze) · [Showcases](#showcases) · [FAQ](#faq) · [Documentation](#documentation)
 
 <code>npx rea-agents setup</code>
 
 </div>
 
+> [!NOTE]
+> **Fork Notice (`magjangin/rea-hwa`)**:
+> This repository is a specialized fork of the upstream project [morluto/rea](https://github.com/morluto/rea), maintained by [@magjangin](https://github.com/magjangin).
+> All original core credits and copyright belong to the upstream [morluto/rea](https://github.com/morluto/rea) authors and contributors under the MIT License.
+>
+> **What's Added in `rea-hwa`:**
+>
+> - **Large PE & Unity IL2CPP Slicing Tools (`tools/pe_slice.py`, `tools/il2cpp_asm.py`)**: Solves Ghidra analysis timeouts and memory exhaustion on large binaries (e.g., Unity `GameAssembly.dll` >10MB, Android `libil2cpp.so`, iOS `UnityFramework`) by extracting targeted lightweight slice DLLs (<1MB) with annotated symbols.
+> - **Automated Agent Routing Guidance**: Built-in routing instructions for AI coding agents to automatically prioritize slicing before attempting heavy deep disassembler inspection.
+>
+> _If you are looking for the official mainline REA distribution, please visit the upstream repository at [morluto/rea](https://github.com/morluto/rea) or [rea.tools](https://rea.tools/)._
+
 > [!IMPORTANT]
-> Get REA from [morluto/rea](https://github.com/morluto/rea),
-> [rea.tools](https://rea.tools/), or the [rea-agents npm package](https://www.npmjs.com/package/rea-agents).
-> Follow the installation and release links from these official sources. A similar
-> repository name or copied README does not establish that a download is official.
+> **Official Upstream Distribution Notice:**
+> Mainline REA is officially maintained at [morluto/rea](https://github.com/morluto/rea),
+> [rea.tools](https://rea.tools/), and the [rea-agents npm package](https://www.npmjs.com/package/rea-agents).
+> Follow the official sources for mainline releases. This repository (`magjangin/rea-hwa`) is an independent open-source fork tailored for game reverse engineering and large target slicing.
 
 <div align="center">
 
@@ -65,6 +79,39 @@ REA connects your agent to tools for inspecting native binaries, JavaScript and 
 Setup registers REA with your agent and installs matching workflow instructions. Native analysis can use an existing Hopper, Ghidra, or IDA installation; setup can optionally install Hopper with approval. Static JavaScript analysis needs no native analysis engine.
 
 > **[Visit the REA website](https://rea.tools/)** for setup instructions, illustrated guides, and real case studies.
+
+## ⚡ Specialized Enhancements in `rea-hwa`
+
+`rea-hwa` introduces specialized tooling and routing instructions to overcome disassembly bottlenecks when analyzing large Windows PE targets and Unity IL2CPP games:
+
+### 1. Fast PE Slicing (`tools/pe_slice.py` / `tools/pe-slice.mjs`)
+
+When running REA against massive Windows PE binaries (such as Unity's `GameAssembly.dll`, often 50MB–100MB+), full-binary Ghidra analysis can easily exceed MCP timeouts and exhaust RAM.
+
+- **Minimal Slice Generation**: Extracts a lightweight slice PE (<1MB) with only the requested target functions, unwind `.pdata` chains, direct callee stubs, and RIP-relative data pages.
+- **Il2CppDumper Integration**: Automatically embeds method and string names from Il2CppDumper `script.json` into the slice's export table, rendering readable symbols in Ghidra decompilation.
+- **Usage**:
+  ```bash
+  node tools/pe-slice.mjs --dll GameAssembly.dll --script-json script.json --class TargetClass --out slices/TargetClass.dll
+  node tools/pe-slice.mjs --dll GameAssembly.dll --script-json script.json --method "TargetClass::TargetMethod" --out slices/TargetMethod.dll
+  ```
+
+### 2. Cross-Platform IL2CPP Disassembly (`tools/il2cpp_asm.py` / `tools/il2cpp-asm.mjs`)
+
+- **Direct Instruction Annotation**: Disassembles ARM64 / x64 IL2CPP binaries (ELF, Mach-O, PE) directly without requiring full disassembler sessions.
+- **Mobile Support on Windows**: Inspect Android `libil2cpp.so` or iOS `UnityFramework` directly on Windows with annotated calls and strings from `dump.cs` and `script.json`.
+- **FairPlay Check**: Includes `--check-encryption` to check iOS Mach-O `cryptid`.
+- **Usage**:
+  ```bash
+  node tools/il2cpp-asm.mjs --binary libil2cpp.so --dump dump.cs --script-json script.json --class PlayerController --out logs/PlayerController.asm
+  node tools/il2cpp-asm.mjs --check-encryption Payload/Game.app/Frameworks/UnityFramework.framework/UnityFramework
+  ```
+
+### 3. Built-in Agent Routing Guidelines
+
+`AGENTS.md` and `SKILL.md` are pre-configured to guide AI assistants: for PE binaries >10MB or `GameAssembly.dll`, agents automatically slice target functions first, ensuring responsive analysis without context freezes. See [tools/README.md](tools/README.md) for full documentation.
+
+---
 
 ## Quick start
 

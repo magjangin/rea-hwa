@@ -4,17 +4,17 @@
  * the npm package or executable exposed in package.json.
  */
 export const PRODUCT_IDENTITY = {
-  displayName: "REA",
+  displayName: "REA-HWA",
   packageName: PACKAGE_METADATA.name,
   packageSpecifier: `${PACKAGE_METADATA.name}@latest`,
   registrationPackageSpecifier: `${PACKAGE_METADATA.name}@${PACKAGE_METADATA.version}`,
   packageVersion: PACKAGE_METADATA.version,
-  cliBinary: "rea",
+  cliBinary: "rea-hwa",
   mcpCommand: `npx -y ${PACKAGE_METADATA.name}@${PACKAGE_METADATA.version} mcp`,
-  mcpServerKey: "rea",
+  mcpServerKey: "rea-hwa",
   skillName: "reverse-engineer-anything",
   skillVersion: PACKAGE_METADATA.skillVersion,
-  configFileName: "rea.json",
+  configFileName: "rea-hwa.json",
 } as const;
 
 /** Exact SDK package identities, distinct from negotiated protocol version. */

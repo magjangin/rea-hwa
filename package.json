@@ -1,16 +1,16 @@
 {
   "name": "rea-agents",
-  "mcpName": "io.github.morluto/rea",
+  "mcpName": "io.github.magjangin/rea-hwa",
   "version": "6.7.0",
   "description": "Reverse engineer anything from your terminal or agent with one CLI and MCP server.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/morluto/rea.git"
+    "url": "git+https://github.com/magjangin/rea-hwa.git"
   },
-  "homepage": "https://github.com/morluto/rea#readme",
+  "homepage": "https://github.com/magjangin/rea-hwa#readme",
   "bugs": {
-    "url": "https://github.com/morluto/rea/issues"
+    "url": "https://github.com/magjangin/rea-hwa/issues"
   },
   "keywords": [
     "reverse-engineering",
@@ -39,6 +39,7 @@
   },
   "bin": {
     "rea": "scripts/rea.mjs",
+    "rea-hwa": "scripts/rea.mjs",
     "rea-agents": "scripts/rea.mjs"
   },
   "engines": {

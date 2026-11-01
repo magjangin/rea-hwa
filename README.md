@@ -1,3 +1,8 @@
+> [!WARNING]
+> **이 저장소는 원작 REA가 아닙니다 / This is NOT the original REA repository.**
+> `magjangin/rea-hwa`는 [morluto/rea](https://github.com/morluto/rea)를 기반으로 한 **비공식 포크**이며, 원작 저장소·공식 배포(rea.tools, npm `rea-agents`)와 무관한 별도 프로젝트입니다.
+> `magjangin/rea-hwa` is an **unofficial, independent fork** of [morluto/rea](https://github.com/morluto/rea). It is not affiliated with the upstream project, rea.tools, or the `rea-agents` npm package. Original credit and copyright belong to the upstream authors (MIT License).
+
 <div align="center">
 
 **English** · [简体中文](docs/readme/README_zh.md) · [繁體中文](docs/readme/README_zh-TW.md) · [日本語](docs/readme/README_ja.md) · [한국어](docs/readme/README_ko.md) · [Türkçe](docs/readme/README_tr.md) · [Русский](docs/readme/README_ru.md) · [Tiếng Việt](docs/readme/README_vi.md) · [ไทย](docs/readme/README_th.md) · [Deutsch](docs/readme/README_de.md) · [Español](docs/readme/README_es.md) · [Français](docs/readme/README_fr.md) · [Українська](docs/readme/README_uk.md) · [Polski](docs/readme/README_pl.md) · [Português (Brasil)](docs/readme/README_pt-BR.md) · [العربية](docs/readme/README_ar.md) · [فارسی](docs/readme/README_fa.md) · [Bahasa Indonesia](docs/readme/README_id.md) · [Italiano](docs/readme/README_it.md)
@@ -18,13 +23,11 @@
 [![MIT license](https://img.shields.io/badge/license-MIT-f4c430?style=flat-square)](LICENSE)
 [![Discord](https://img.shields.io/discord/1556595354999332884?logo=discord&logoColor=white&label=Discord&color=5865F2)](https://discord.gg/GkcryMnJDM)
 
-<a href="https://trendshift.io/repositories/82054?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-82054" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/82054" alt="morluto%2Frea | Trendshift" width="250" height="55"/></a>
-
 **[Website](https://rea.tools/) · [Guides](https://rea.tools/guides/) · [Showcases](https://rea.tools/showcase/)**
 
 [Quick start](#quick-start) · [⚡ rea-hwa Enhancements](#-specialized-enhancements-in-rea-hwa) · [How REA works](#how-rea-works) · [What you can analyze](#what-you-can-analyze) · [Showcases](#showcases) · [FAQ](#faq) · [Documentation](#documentation)
 
-<code>npx rea-agents setup</code>
+<code>npx rea-agents setup</code> <sub>(upstream package — installs the original REA, not this fork)</sub>
 
 </div>
 

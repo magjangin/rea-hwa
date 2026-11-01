@@ -1,7 +1,33 @@
-> [!WARNING]
-> **이 저장소는 원작 REA가 아닙니다 / This is NOT the original REA repository.**
-> `magjangin/rea-hwa`는 [morluto/rea](https://github.com/morluto/rea)를 기반으로 한 **비공식 포크**이며, 원작 저장소·공식 배포(rea.tools, npm `rea-agents`)와 무관한 별도 프로젝트입니다.
-> `magjangin/rea-hwa` is an **unofficial, independent fork** of [morluto/rea](https://github.com/morluto/rea). It is not affiliated with the upstream project, rea.tools, or the `rea-agents` npm package. Original credit and copyright belong to the upstream authors (MIT License).
+# rea-hwa
+
+> [!IMPORTANT]
+> **이 저장소는 원작 저장소가 아닙니다.**
+> 원작은 [morluto/rea](https://github.com/morluto/rea)(MIT, 공식 사이트 [rea.tools](https://rea.tools/), npm 패키지 [`rea-agents`](https://www.npmjs.com/package/rea-agents))이고,
+> 이 저장소는 원작을 바탕으로 게임 리버싱과 대용량 바이너리 분석용 도구를 얹은 **비공식 포크**입니다.
+> 원작자와 관계가 없으며, 원작자의 검토나 지원을 받지 않습니다.
+> 버그 제보, 기능 요청, 공식 릴리스처럼 원작에 관한 일은 [원작 저장소](https://github.com/morluto/rea)를 이용해 주세요.
+>
+> **This is not the original repository.** It is an unofficial, independent fork of
+> [morluto/rea](https://github.com/morluto/rea) maintained by [@magjangin](https://github.com/magjangin).
+> It is not affiliated with or endorsed by the upstream authors. Please report upstream issues there.
+
+## 원작과 다른 점
+
+- **PE 슬라이싱 도구를 추가했습니다:** `tools/pe_slice.py`, `tools/pe-slice.mjs`. Unity `GameAssembly.dll`처럼 10MB가 넘는 PE에서 필요한 함수만 담은 1MB 미만 슬라이스 DLL을 만들어, Ghidra 분석 타임아웃과 메모리 부족을 피합니다.
+- **IL2CPP 어셈블리 도구를 추가했습니다:** `tools/il2cpp_asm.py`, `tools/il2cpp-asm.mjs`. Android `libil2cpp.so`, iOS `UnityFramework` 같은 ARM64/x64 바이너리를 `dump.cs`, `script.json` 주석이 달린 어셈블리로 바로 뽑습니다.
+- **에이전트 라우팅 지침을 `AGENTS.md`에 넣었습니다:** 큰 PE나 `GameAssembly.dll`은 `open_binary` 전에 슬라이싱부터 하도록 안내합니다.
+- **이름과 식별자가 원작과 다릅니다:** 패키지/MCP 서버 키는 `rea-hwa`입니다. `npx rea-agents ...`는 원작 패키지를 설치하므로 이 포크가 아닙니다.
+- 그 외 분석 엔진과 MCP 도구는 원작 그대로입니다. 원작 업데이트를 자동으로 따라가지 않습니다.
+
+슬라이싱 도구 사용법은 아래 [rea-hwa 개선 사항](#-specialized-enhancements-in-rea-hwa)과 [tools/README.md](tools/README.md)에 있습니다.
+
+## 라이선스와 출처
+
+원작과 같은 MIT 라이선스입니다. [LICENSE](LICENSE)의 원작 저작권 표시를 그대로 유지합니다. 아래 내용 중 슬라이싱 도구를 제외한 나머지는 원작 [morluto/rea](https://github.com/morluto/rea)의 문서입니다.
+
+---
+
+# 아래는 원작 REA 문서입니다 (Upstream README)
 
 <div align="center">
 
@@ -30,24 +56,6 @@
 <code>npx rea-agents setup</code> <sub>(upstream package — installs the original REA, not this fork)</sub>
 
 </div>
-
-> [!NOTE]
-> **Fork Notice (`magjangin/rea-hwa`)**:
-> This repository is a specialized fork of the upstream project [morluto/rea](https://github.com/morluto/rea), maintained by [@magjangin](https://github.com/magjangin).
-> All original core credits and copyright belong to the upstream [morluto/rea](https://github.com/morluto/rea) authors and contributors under the MIT License.
->
-> **What's Added in `rea-hwa`:**
->
-> - **Large PE & Unity IL2CPP Slicing Tools (`tools/pe_slice.py`, `tools/il2cpp_asm.py`)**: Solves Ghidra analysis timeouts and memory exhaustion on large binaries (e.g., Unity `GameAssembly.dll` >10MB, Android `libil2cpp.so`, iOS `UnityFramework`) by extracting targeted lightweight slice DLLs (<1MB) with annotated symbols.
-> - **Automated Agent Routing Guidance**: Built-in routing instructions for AI coding agents to automatically prioritize slicing before attempting heavy deep disassembler inspection.
->
-> _If you are looking for the official mainline REA distribution, please visit the upstream repository at [morluto/rea](https://github.com/morluto/rea) or [rea.tools](https://rea.tools/)._
-
-> [!IMPORTANT]
-> **Official Upstream Distribution Notice:**
-> Mainline REA is officially maintained at [morluto/rea](https://github.com/morluto/rea),
-> [rea.tools](https://rea.tools/), and the [rea-agents npm package](https://www.npmjs.com/package/rea-agents).
-> Follow the official sources for mainline releases. This repository (`magjangin/rea-hwa`) is an independent open-source fork tailored for game reverse engineering and large target slicing.
 
 <div align="center">
 

@@ -8,11 +8,13 @@ import { expect, it } from "vitest";
 import { toolContract } from "../../../src/contracts/toolContracts.js";
 import { createEvidence, parseEvidence } from "../../../src/domain/evidence.js";
 import { EMPTY_PROCESS_CAPTURE_EXAMPLE } from "../../../src/domain/process/processCaptureExample.js";
+import type { ProcessCapture } from "../../../src/domain/process/processCaptureParsing.js";
 import { PROCESS_PROVIDER } from "../../../src/domain/process/processEvidenceProvider.js";
 import { itWithCaptureCapability as captureTest } from "../../boundary/process/processCaptureCapability.js";
 import { connectLocalToolsMcp } from "../../fixtures/localToolsMcp.js";
 import { parseMcpToolError } from "../../fixtures/mcpToolError.js";
 import { createTestTempDirectory } from "../../fixtures/temporaryDirectory.js";
+import { cliCompileCacheEnvironment } from "../../support/cli/cliFixture.js";
 
 const execute = promisify(execFile);
 const cli = fileURLToPath(new URL("../../../scripts/rea.mjs", import.meta.url));
@@ -20,6 +22,15 @@ const nul = "/tmp/selected\0filename";
 const electron = {
   executable_path: "/tmp/Electron",
   application_path: "/tmp/main.js",
+};
+
+const captureResult = (value: unknown): ProcessCapture => {
+  const normalized = toolContract(
+    "capture_process_scenario",
+  ).outputSchema.parse(value).normalized_result;
+  if ("status" in normalized && normalized.status === "planned")
+    throw new Error("expected process capture output");
+  return normalized as ProcessCapture;
 };
 
 it("keeps overall replay verification unknown when capture divergence is unknown", async () => {
@@ -124,13 +135,13 @@ it("keeps overall replay verification unknown when capture divergence is unknown
 
 const runCliExpectingInputError = async (
   scenarioPath: string,
+  environment?: NodeJS.ProcessEnv,
 ): Promise<unknown> => {
-  const failure = await execute(process.execPath, [
-    cli,
-    "capture-process",
-    scenarioPath,
-    "--json",
-  ]).then(
+  const failure = await execute(
+    process.execPath,
+    [cli, "capture-process", scenarioPath, "--json"],
+    { env: environment },
+  ).then(
     () => undefined,
     (cause: unknown) => cause,
   );
@@ -155,11 +166,26 @@ const pathRequests: readonly [string, Record<string, unknown>][] = [
     "inspect_android_method",
     { path: nul, class_name: "probe.Class", method_name: "run" },
   ],
+  [
+    "inspect_android_class",
+    { path: "/tmp/probe.apk", class_name: "probe.Class", mapping_path: nul },
+  ],
+  [
+    "inspect_android_method",
+    {
+      path: "/tmp/probe.apk",
+      class_name: "probe.Class",
+      method_name: "run",
+      mapping_path: nul,
+    },
+  ],
   ["trace_android_references", { path: nul, class_name: "probe.Class" }],
   ["inspect_firmware_regions", { path: nul }],
   ["extract_firmware", { path: nul, output_directory: "/tmp/out" }],
   ["extract_firmware", { path: "/tmp/firmware.bin", output_directory: nul }],
   ["inspect_plist", { path: nul }],
+  ["inspect_with_objdump", { path: nul, operation: "file_headers" }],
+  ["execute_rizin_command", { path: nul, command: "iI" }],
   ...[
     { kind: "function", name: "main\0suffix" },
     { kind: "function", name: "main", module: "lib.dylib\0suffix" },
@@ -218,6 +244,17 @@ const pathRequests: readonly [string, Record<string, unknown>][] = [
     { capture_path: nul, output_directory: "/tmp/exported-scripts" },
   ],
   ["inspect_pe_resources", { path: nul }],
+  ["inspect_pe_certificates", { path: nul }],
+  ["inspect_pe_imports", { path: nul }],
+  ["inspect_native_exports", { path: nul }],
+  ["inspect_elf_notes", { path: nul }],
+  ["inspect_apple_ips", { path: nul }],
+  ["inspect_devicetree", { path: nul }],
+  ["inspect_kernel_module", { path: nul }],
+  ["inspect_pe_load_config", { path: nul }],
+  ["inspect_binary_hardening", { path: nul }],
+  ["inspect_python_pyc", { path: nul }],
+  ["inspect_erlang_beam", { path: nul }],
   ["inspect_binary_layout", { path: nul }],
   ["inspect_recorded_crash", { path: nul }],
   ["inspect_wasm_artifact", { path: nul }],
@@ -307,7 +344,7 @@ it("rejects OS-invalid local inputs through the real advertised MCP contracts", 
   expect(JSON.stringify(relative.content)).toContain(
     "absolute local filesystem path",
   );
-});
+}, 60_000);
 
 const ignoredOptions = [
   { terminal: { columns: 80, row: 12 } },
@@ -327,6 +364,10 @@ captureTest(
   "rejects malformed process choices through CLI and MCP before launching the command",
   async () => {
     const root = await createTestTempDirectory("rea-local-contracts-");
+    const environment = cliCompileCacheEnvironment(
+      process.env,
+      join(root, "node-compile-cache"),
+    );
     const marker = join(root, "launched");
     const scenario = {
       executable: process.execPath,
@@ -373,7 +414,13 @@ captureTest(
           const path = join(root, `scenario-${String(start + offset)}.json`);
           await writeFile(path, JSON.stringify(request));
           await expect(
-            execute(process.execPath, [cli, "capture-process", path, "--json"]),
+            execute(
+              process.execPath,
+              [cli, "capture-process", path, "--json"],
+              {
+                env: environment,
+              },
+            ),
             JSON.stringify(options),
           ).rejects.toMatchObject({
             code: 1,
@@ -406,6 +453,7 @@ captureTest(
     );
     const executableCliFailure = await runCliExpectingInputError(
       join(root, "scenario.json"),
+      environment,
     );
     expect(executableCliFailure).toMatchObject({
       code: "invalid_request",
@@ -449,7 +497,9 @@ captureTest(
         working_directory: missingWorkingDirectory,
       }),
     );
-    expect(await runCliExpectingInputError(cwdScenario)).toMatchObject({
+    expect(
+      await runCliExpectingInputError(cwdScenario, environment),
+    ).toMatchObject({
       code: "invalid_request",
       details: {
         operation: "capture_process_scenario",
@@ -464,7 +514,9 @@ captureTest(
       },
     });
   },
-  60_000,
+  // 22 malformed requests plus two filesystem errors each start a fresh CLI.
+  // Cache compilation, but allow for startup at the bounded fanout of two.
+  120_000,
 );
 
 captureTest.each(["untruncated", "truncated"] as const)(
@@ -489,15 +541,15 @@ captureTest.each(["untruncated", "truncated"] as const)(
       limits: captureState === "truncated" ? { output_bytes: 128 } : {},
     });
     expect(captured.isError, JSON.stringify(captured)).not.toBe(true);
-    const capture = toolContract("capture_process_scenario").outputSchema.parse(
+    const source = toolContract("capture_process_scenario").outputSchema.parse(
       captured.structuredContent,
     );
-    const source = capture;
+    const capture = captureResult(source);
     if (captureState === "untruncated")
-      expect(
-        capture.normalized_result.frames.map((frame) => frame.data).join(""),
-      ).toContain("value ordinary-evidence caller-value");
-    else expect(capture.normalized_result.truncated).toBe(true);
+      expect(capture.frames.map((frame) => frame.data).join("")).toContain(
+        "value ordinary-evidence caller-value",
+      );
+    else expect(capture.truncated).toBe(true);
     const environment = await call("capture_process_scenario", {
       executable: "/usr/bin/printenv",
       arguments: ["1"],
@@ -506,15 +558,15 @@ captureTest.each(["untruncated", "truncated"] as const)(
     const environmentEnvelope = toolContract(
       "capture_process_scenario",
     ).outputSchema.parse(environment.structuredContent);
-    const received = environmentEnvelope.normalized_result.frames
-      .map((frame) => frame.data)
+    const received = captureResult(environmentEnvelope)
+      .frames.map((frame) => frame.data)
       .join("");
     expect(received).toBe("numbered\r\n");
     expect(await readFile(join(root, "state"), "utf8")).toBe("selected");
-    expect(capture.normalized_result.filesystem_effects).toEqual(
+    expect(capture.filesystem_effects).toEqual(
       expect.arrayContaining([expect.objectContaining({ status: "created" })]),
     );
-    expect(capture.normalized_result.cleanup).toMatchObject({
+    expect(capture.cleanup).toMatchObject({
       owned_process_group: "verified",
       temporary_root: "removed",
     });
@@ -620,18 +672,16 @@ captureTest(
       events: [{ type: "input", at_ms: 1000, data: "\0" }],
     });
     expect(response.isError, JSON.stringify(response)).not.toBe(true);
-    const capture = toolContract("capture_process_scenario").outputSchema.parse(
-      response.structuredContent,
+    const capture = captureResult(response.structuredContent);
+    expect(capture.frames.map((frame) => frame.data).join("")).toContain(
+      "stdin-byte:0",
     );
-    expect(
-      capture.normalized_result.frames.map((frame) => frame.data).join(""),
-    ).toContain("stdin-byte:0");
-    expect(capture.normalized_result.manifest.scenario).toMatchObject({
+    expect(capture.manifest.scenario).toMatchObject({
       environment: {},
       filesystem_observation_paths: [],
       terminal: { columns: 80, rows: 24, scrollback: 1000 },
     });
-    expect(capture.normalized_result.interaction_events).toEqual(
+    expect(capture.interaction_events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           type: "input",

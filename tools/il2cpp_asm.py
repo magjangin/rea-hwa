@@ -95,7 +95,8 @@ def detect(blob, want_arch):
 # ───────────────────────── iOS 암호화 확인 ─────────────────────────
 
 def check_encryption(path):
-    blob = open(path, "rb").read()
+    with open(path, "rb") as f:
+        blob = f.read()
     slices = fat_slices(blob)
     if slices is None:
         if blob[:4] not in (b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe"):
@@ -138,7 +139,8 @@ class Symbols:
             die(f"dump.cs가 없습니다: {dump_cs} (Il2CppDumper 덤프를 먼저 만들어 주세요)")
         if not os.path.isfile(script_json):
             die(f"script.json이 없습니다: {script_json}")
-        text = open(dump_cs, encoding="utf-8", errors="ignore").read()
+        with open(dump_cs, encoding="utf-8", errors="ignore") as f:
+            text = f.read()
         pairs = {}
         for m in re.finditer(r"// RVA: 0x([0-9A-Fa-f]+) Offset: 0x([0-9A-Fa-f]+) VA: 0x([0-9A-Fa-f]+)", text):
             pairs[int(m.group(1), 16)] = int(m.group(2), 16)
@@ -147,7 +149,8 @@ class Symbols:
         self.rvas = sorted(pairs)
         self.offsets = pairs
 
-        d = json.load(open(script_json, encoding="utf-8"))
+        with open(script_json, encoding="utf-8") as f:
+            d = json.load(f)
         self.methods, self.by_name, self.data, self.shared = {}, {}, {}, {}
         for x in d.get("ScriptMethod", []):
             self.methods.setdefault(x["Address"], x["Name"])
@@ -171,7 +174,7 @@ class Symbols:
     def end_of(self, rva):
         i = bisect.bisect_right(self.rvas, rva)
         nxt = self.rvas[i] if i < len(self.rvas) else rva + 0x400
-        return min(nxt, rva + MAX_FUNC)
+        return min(nxt, rva + MAX_FUNC), nxt > rva + MAX_FUNC
 
     def name_at(self, rva):
         if rva in self.methods:
@@ -303,7 +306,8 @@ def main():
     except ImportError:
         die("capstone이 필요합니다: pip install capstone")
 
-    blob = open(a.binary, "rb").read()
+    with open(a.binary, "rb") as f:
+        blob = f.read()
     arch, base_off, fmt = detect(blob, a.arch)
     sym = Symbols(a.dump, a.script_json)
     targets = sym.find(a.classes, a.methods)
@@ -315,7 +319,7 @@ def main():
     out, total_named = [f"; il2cpp_asm {VERSION} — {os.path.abspath(a.binary)} ({fmt}, {arch})",
                         "; 주소는 RVA(dump.cs·script.json과 같은 기준). 함수 끝은 다음 메서드 시작으로 추정.", ""], 0
     for rva in sorted(targets):
-        end = sym.end_of(rva)
+        end, truncated = sym.end_of(rva)
         fo = sym.file_offset(rva)
         if fo is None or base_off + fo >= len(blob):
             out.append(f"; ===== {targets[rva]}  RVA {rva:#x}: 파일 오프셋을 계산할 수 없음\n")
@@ -325,12 +329,18 @@ def main():
         lines, named = fn(code, rva, rva, end, sym)
         total_named += named
         out.append(f"; ===== {targets[rva]}  RVA {rva:#x}  (파일 오프셋 {base_off + fo:#x}, {end - rva:#x} 바이트 추정)")
+        if truncated:
+            warn = (f"{targets[rva]} (RVA {rva:#x}): 함수가 {MAX_FUNC:#x} 바이트를 넘어 "
+                    f"여기서 잘렸습니다. 뒷부분은 출력되지 않았습니다.")
+            print(f"[il2cpp_asm] 경고: {warn}", file=sys.stderr)
+            lines.append(f"; ※ 잘림: {MAX_FUNC:#x} 바이트 제한 (MAX_FUNC)에서 출력을 멈췄습니다.")
         out += lines + [""]
 
     text = "\n".join(out)
     if a.out:
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
-        open(a.out, "w", encoding="utf-8").write(text)
+        with open(a.out, "w", encoding="utf-8") as f:
+            f.write(text)
         print(f"어셈블리: {os.path.abspath(a.out)}  ({fmt}, {arch}, 메서드 {len(targets)}개, 이름 주석 {total_named}개)")
         for rva in sorted(targets)[:40]:
             print(f"  {rva:#x}  {targets[rva]}")

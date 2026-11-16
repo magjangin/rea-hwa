@@ -41,7 +41,8 @@ def die(msg):
 
 class Pe:
     def __init__(self, path):
-        self.blob = open(path, "rb").read()
+        with open(path, "rb") as f:
+            self.blob = f.read()
         b = self.blob
         if b[:2] != b"MZ":
             die(f"PE 파일이 아닙니다: {path}")
@@ -152,7 +153,8 @@ class Names:
             return
         if not os.path.isfile(script_json):
             die(f"script.json이 없습니다: {script_json} (Il2CppDumper 덤프를 먼저 만들어 주세요)")
-        d = json.load(open(script_json, encoding="utf-8"))
+        with open(script_json, encoding="utf-8") as f:
+            d = json.load(f)
         for x in d.get("ScriptMethod", []):
             self.methods.setdefault(x["Address"], x["Name"])
             self.by_name.setdefault(x["Name"], []).append(x["Address"])
@@ -284,7 +286,8 @@ def write_pe(path, pe, ranges, exports):
                          s["rs"], s["rp"], 0, 0, 0, 0, s["ch"])
         out[s["rp"]:s["rp"] + len(s["raw"])] = s["raw"]
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-    open(path, "wb").write(out)
+    with open(path, "wb") as f:
+        f.write(out)
     return len(out), nsec
 
 
@@ -407,7 +410,8 @@ def main():
         "names": {f"{pe.base + r:#x}": nm for r, nm in sorted(exports.items())},
         "data_values": {f"{pe.base + r:#x}": names.data[r][1] for r in sorted(exports) if r in names.data},
     }
-    json.dump(report, open(a.out + ".names.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    with open(a.out + ".names.json", "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=1)
 
     print(f"조각 PE: {out_abs}  ({size:,} 바이트, 섹션 {nsec}개, 이름 {len(exports)}개)")
     if not precise:

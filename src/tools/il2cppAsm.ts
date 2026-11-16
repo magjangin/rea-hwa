@@ -1,5 +1,8 @@
-import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import {
+  defaultToolScript,
+  runPythonTool,
+  type PythonToolResult,
+} from "./pythonTool.js";
 
 export interface Il2CppAsmOptions {
   binaryPath: string;
@@ -12,11 +15,7 @@ export interface Il2CppAsmOptions {
   maxFunctions?: number;
 }
 
-export interface Il2CppAsmResult {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-}
+export type Il2CppAsmResult = PythonToolResult;
 
 /**
  * Executes tools/il2cpp_asm.py to disassemble IL2CPP methods with symbol annotations
@@ -24,13 +23,11 @@ export interface Il2CppAsmResult {
  */
 export async function runIl2CppAsm(
   options: Il2CppAsmOptions,
-  scriptPathOverride?: string
+  scriptPathOverride?: string,
 ): Promise<Il2CppAsmResult> {
-  const scriptPath =
-    scriptPathOverride ?? resolve(process.cwd(), "tools", "il2cpp_asm.py");
-  const pythonCmd = process.platform === "win32" ? "python" : "python3";
+  const scriptPath = scriptPathOverride ?? defaultToolScript("il2cpp_asm.py");
 
-  const args: string[] = [scriptPath, "--binary", options.binaryPath];
+  const args: string[] = ["--binary", options.binaryPath];
 
   if (options.outputPath) {
     args.push("--out", options.outputPath);
@@ -58,31 +55,7 @@ export async function runIl2CppAsm(
     args.push("--max-functions", options.maxFunctions.toString());
   }
 
-  return new Promise((res, rej) => {
-    let stdout = "";
-    let stderr = "";
-
-    const proc = spawn(pythonCmd, args, { env: process.env });
-
-    proc.stdout?.on("data", (d: Buffer) => {
-      stdout += d.toString("utf8");
-    });
-    proc.stderr?.on("data", (d: Buffer) => {
-      stderr += d.toString("utf8");
-    });
-
-    proc.on("error", (err) => {
-      rej(err);
-    });
-
-    proc.on("close", (code) => {
-      res({
-        exitCode: code ?? 0,
-        stdout,
-        stderr,
-      });
-    });
-  });
+  return runPythonTool(scriptPath, args);
 }
 
 /**
@@ -90,21 +63,13 @@ export async function runIl2CppAsm(
  */
 export async function checkMachOEncryption(
   machoPath: string,
-  scriptPathOverride?: string
+  scriptPathOverride?: string,
 ): Promise<boolean> {
-  const scriptPath =
-    scriptPathOverride ?? resolve(process.cwd(), "tools", "il2cpp_asm.py");
-  const pythonCmd = process.platform === "win32" ? "python" : "python3";
-
-  return new Promise((res, rej) => {
-    const proc = spawn(pythonCmd, [scriptPath, "--check-encryption", machoPath], {
-      env: process.env,
-    });
-
-    proc.on("error", rej);
-    proc.on("close", (code) => {
-      // Exit code 2 indicates encrypted
-      res(code === 2);
-    });
-  });
+  const scriptPath = scriptPathOverride ?? defaultToolScript("il2cpp_asm.py");
+  const { exitCode } = await runPythonTool(scriptPath, [
+    "--check-encryption",
+    machoPath,
+  ]);
+  // Exit code 2 indicates encrypted
+  return exitCode === 2;
 }

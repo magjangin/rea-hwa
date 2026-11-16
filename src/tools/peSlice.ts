@@ -1,5 +1,8 @@
-import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import {
+  defaultToolScript,
+  runPythonTool,
+  type PythonToolResult,
+} from "./pythonTool.js";
 
 export interface PeSliceOptions {
   dllPath: string;
@@ -11,11 +14,7 @@ export interface PeSliceOptions {
   maxFunctions?: number;
 }
 
-export interface PeSliceResult {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
-}
+export type PeSliceResult = PythonToolResult;
 
 /**
  * Executes tools/pe_slice.py to create a minimal sliced PE containing only
@@ -23,14 +22,11 @@ export interface PeSliceResult {
  */
 export async function runPeSlice(
   options: PeSliceOptions,
-  scriptPathOverride?: string
+  scriptPathOverride?: string,
 ): Promise<PeSliceResult> {
-  const scriptPath =
-    scriptPathOverride ?? resolve(process.cwd(), "tools", "pe_slice.py");
-  const pythonCmd = process.platform === "win32" ? "python" : "python3";
+  const scriptPath = scriptPathOverride ?? defaultToolScript("pe_slice.py");
 
   const args: string[] = [
-    scriptPath,
     "--dll",
     options.dllPath,
     "--out",
@@ -59,29 +55,5 @@ export async function runPeSlice(
     args.push("--max-functions", options.maxFunctions.toString());
   }
 
-  return new Promise((res, rej) => {
-    let stdout = "";
-    let stderr = "";
-
-    const proc = spawn(pythonCmd, args, { env: process.env });
-
-    proc.stdout?.on("data", (d: Buffer) => {
-      stdout += d.toString("utf8");
-    });
-    proc.stderr?.on("data", (d: Buffer) => {
-      stderr += d.toString("utf8");
-    });
-
-    proc.on("error", (err) => {
-      rej(err);
-    });
-
-    proc.on("close", (code) => {
-      res({
-        exitCode: code ?? 0,
-        stdout,
-        stderr,
-      });
-    });
-  });
+  return runPythonTool(scriptPath, args);
 }

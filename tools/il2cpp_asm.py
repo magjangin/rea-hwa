@@ -244,7 +244,8 @@ def disasm_arm64(code, rva, start, end, sym):
                     note, named = f"[{n}]", named + 1
             if mn.startswith("ldr"):
                 pages.pop(reg(ops[0]), None)
-        pages = {k: (v, left - 1) for k, (v, left) in pages.items() if left > 1}
+        if pages:   # 대부분의 명령에는 활성 ADRP가 없으므로 딕셔너리 재생성을 건너뜀
+            pages = {k: (v, left - 1) for k, (v, left) in pages.items() if left > 1}
         lines.append(f"{ins.address:#010x}  {mn:<8}{ins.op_str}" + (f"    ; {note}" if note else ""))
     return lines, named
 

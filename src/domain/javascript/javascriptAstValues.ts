@@ -114,6 +114,20 @@ export const readExactJavaScriptLiteral = (
   return { found: false };
 };
 
+/**
+ * Return a string literal value without evaluating an expression. A template
+ * literal without substitutions denotes the same exact string.
+ */
+export const stringValue = (
+  node: t.Node | null | undefined,
+): string | undefined => {
+  if (node === null || node === undefined) return undefined;
+  const literal = readExactJavaScriptLiteral(node);
+  return literal.found && typeof literal.value === "string"
+    ? literal.value
+    : undefined;
+};
+
 /** Read an identifier or literal property name without evaluating syntax. */
 export const propertyName = (node: t.Node): string => {
   if (t.isIdentifier(node)) return node.name;
@@ -173,19 +187,29 @@ export const staticJavaScriptTruthiness = (
   if (t.isStringLiteral(value)) return value.value.length > 0;
   if (t.isNumericLiteral(value))
     return value.value !== 0 && !Number.isNaN(value.value);
-  // Babel exposes a BigIntLiteral value as either "0" or 0n depending on version.
-  if (t.isBigIntLiteral(value)) return String(value.value) !== "0";
+  // Babel exposes a BigIntLiteral value as a bigint or, in older versions, its
+  // source digits, which may carry a 0x/0o/0b prefix; BigInt reads both.
+  if (t.isBigIntLiteral(value)) {
+    try {
+      return BigInt(value.value as string | bigint) !== 0n;
+    } catch {
+      return undefined;
+    }
+  }
   if (
     t.isUnaryExpression(value) &&
     value.operator === "-" &&
     t.isNumericLiteral(value.argument)
   )
     return value.argument.value !== 0 && !Number.isNaN(value.argument.value);
+  // Each of these evaluates to a fresh object, and every object is truthy.
   if (
     t.isObjectExpression(value) ||
     t.isArrayExpression(value) ||
     t.isFunctionExpression(value) ||
-    t.isArrowFunctionExpression(value)
+    t.isArrowFunctionExpression(value) ||
+    t.isClassExpression(value) ||
+    t.isRegExpLiteral(value)
   )
     return true;
   return undefined;
@@ -292,11 +316,10 @@ const UNKNOWN_STATIC_OBJECT_MEMBER: StaticObjectMember = { kind: "unknown" };
 
 /** Object-literal prototype setters are never ordinary own-property writes. */
 export const isObjectPrototypeSetter = (
-  property: t.ObjectProperty | t.ObjectMethod,
-  key: string | null = semanticStaticPropertyKey(
-    property.key,
-    property.computed,
-  ),
+  property: t.ObjectExpression["properties"][number],
+  key: string | null = t.isSpreadElement(property)
+    ? null
+    : semanticStaticPropertyKey(property.key, property.computed),
 ): boolean =>
   t.isObjectProperty(property) &&
   !property.computed &&
@@ -397,11 +420,7 @@ const appendEnumerableSourceMembers = (
   }
   const primitive = primitiveOwnKeys(spread, isNullish);
   if (primitive === "indices") {
-    const literal = readExactJavaScriptLiteral(spread);
-    const length =
-      literal.found && typeof literal.value === "string"
-        ? literal.value.length
-        : null;
+    const length = stringValue(spread)?.length ?? null;
     if (length !== 0) members.push({ kind: "primitive-indices", length });
     return undefined;
   }
@@ -617,10 +636,7 @@ export const semanticFinalObjectProperty = (
 export const semanticFinalObjectStringProperty = (
   node: t.ObjectExpression,
   key: string,
-): string | undefined => {
-  const value = semanticFinalObjectProperty(node, key);
-  return t.isStringLiteral(value) ? value.value : undefined;
-};
+): string | undefined => stringValue(semanticFinalObjectProperty(node, key));
 
 /** Read exact consumed object-pattern keys, leaving dynamic keys unknown. */
 export const semanticObjectPatternKeys = (

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { HOST_PLATFORM } from "../platform/HostPlatform.js";
 
 export interface PythonToolResult {
   exitCode: number;
@@ -10,7 +11,7 @@ export interface PythonToolResult {
 
 /** Interpreters to try in order when one is not installed (ENOENT). */
 export function pythonCandidates(
-  platform: NodeJS.Platform = process.platform,
+  platform: NodeJS.Platform,
 ): readonly (readonly string[])[] {
   return platform === "win32"
     ? [["python"], ["py", "-3"], ["python3"]]
@@ -71,7 +72,9 @@ function attempt(
 export async function runPythonTool(
   script: string,
   args: readonly string[],
-  candidates: readonly (readonly string[])[] = pythonCandidates(),
+  candidates: readonly (readonly string[])[] = pythonCandidates(
+    HOST_PLATFORM.platform,
+  ),
 ): Promise<PythonToolResult> {
   let last: NodeJS.ErrnoException | undefined;
   for (const command of candidates) {
